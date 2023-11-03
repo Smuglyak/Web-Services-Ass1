@@ -745,7 +745,7 @@ class Validator
      * @param  array $params
      * @return bool
      */
-    protected function validateRegex($field, $value, $params)
+    protected function validateRegex($value, $params)
     {
         return preg_match($params[0], $value);
     }
@@ -947,7 +947,7 @@ class Validator
             }
         }
         if (is_string($value)) {
-            if (is_string($params[0]) && $value === $params[0]) {
+            if (is_string($params[0]) && get_class($value) === $params[0]) {
                 $isInstanceOf = true;
             }
         }

@@ -74,35 +74,34 @@ class FilmsController extends BaseController
         $page = $filters['page'];
         $page_size = $filters['page_size'];
 
-        $validation_response = $this->isValidPagingParams($filters);
-        if ($validation_response === true) {
-            $this->films_model->setPaginationOptions($filters['page'], $filters['page_size']);
-        } else {
-            //throw new HttpBadRequestException($request, $validation_response);
-        }
-
-
-        // TODO: VALIDATE the paging params.
-        if (!Input::isInt(($page))) {
-            throw new HttpInvalidInputsException(
-                $request,
-                "The provided page number was invalid."
-            );
-        }
-        if (!Input::isInt(($page_size))) {
-            throw new HttpInvalidInputsException(
-                $request,
-                "The provided page_size was invalid."
-            );
-        }
-
-        // $this->films_model->setPaginationOptions($page, $page_size);
-
-        // Get the full list of the films from the DB
-        $films = $this->films_model->getAll($filters);
+        // $validation_response = $this->isValidPagingParams($filters);
+        // if ($validation_response === true) {
+            
+        // } else {
+        //     //throw new HttpBadRequestException($request, $validation_response);
+        //     // TODO: VALIDATE the paging params.
+        //     if (!Input::isInt(($page))) {
+        //         throw new HttpInvalidInputsException(
+        //             $request,
+        //             "The provided page number was invalid."
+        //         );
+        //     }
+        //     if (!Input::isInt(($page_size))) {
+        //         throw new HttpInvalidInputsException(
+        //             $request,
+        //             "The provided page_size was invalid."
+        //         );
+        //     }
+        // }
+        $this->films_model->setPaginationOptions($filters['page'], $filters['page_size']);
+        $films = array(
+            "code" => HttpCode::STATUS_OK,
+            "message" => "The list of films has been acquired",
+            "data" => $this->films_model->getAll($filters)
+        );                  
         //$films_json = json_encode($films);
         // $response->getBody()->Write($films_json);
-        return $this->prepareOkResponse($response, (array)$films);
+        return $this->prepareOkResponse($response, $films);
     }
 
     // Gets a film by its id
@@ -119,13 +118,22 @@ class FilmsController extends BaseController
         }
 
         //!Check-2) if uri is invalid
-        if ($film_id)
-
-            $film_info = $this->films_model->getFilmById($film_id);
-        // prepare the http response
-        $film_json = json_encode($film_info);
-        $response->getBody()->write($film_json);
-        return $response;
+        if (Input::isInt(($film_id))) {
+            $film = array(
+                "code" => HttpCode::STATUS_OK,
+                "message" => "The film has been acquired",
+                "data" => $this->films_model->getFilmById($film_id)
+            );                
+            // prepare the http response
+            $film_json = json_encode($film);
+            $response->getBody()->write($film_json);
+            return $response;
+        } else {
+            throw new HttpBadRequestException(
+                $request,
+                "Could not process the request... The id is invalid!"
+            );
+        }
     }
 
     // Creates a film and adds it to the  db
@@ -146,16 +154,21 @@ class FilmsController extends BaseController
 
         //!Check-2) Validate the all properties of film
         //use a function from the BaseController called isValidData          
-        $validation_response = $this->isValidData($films, $this->validation_rules);
-        if ($validation_response === true) {
-            foreach ($films as $film) {
-                $this->films_model->createFilm($film);
-            }
-        } else {
-            //?else keep track of the encountered errors.            
-
+        // $validation_response = $this->isValidData($films, $this->validation_rules);
+        // if ($validation_response === true) {
+        //     foreach ($films as $film) {
+        //         $this->films_model->createFilm($film);
+        //     }
+        // } else {
+        //     //?else keep track of the encountered errors.            
+        //     // throw new HttpBadRequestException(
+        //     //     $request,
+        //     //     "Could not process the request... The data in films is not valid!"
+        //     // );
+        // }
+        foreach ($films as $film) {
+            $this->films_model->createFilm($film);
         }
-
         // Step 3) Prepare a response
         $response_data = array(
             "code" => HttpCode::STATUS_CREATED,
@@ -166,75 +179,125 @@ class FilmsController extends BaseController
     }
 
     // Updates a film in the db
-    public function handleUpdateFilm(Request $request, Response $response, array $uri_args)
-    {
-        //Step 1 Get data
-        $film_data = $request->getParsedBody();
-
-        //Check 1 If empty
-        if (empty($film_data) || !isset($film_data)) {
-            throw new HttpBadRequestException(
-                $request,
-                "Couldn't process the request... The list of films was empty"
-            );
+    public function handleUpdateFilm(Request $request, Response $response, array $uri_args) {
+        $requestBody = $request->getParsedBody();
+    
+        // Check if the request body is an array
+        if (!is_array($requestBody)) {
+            $response_data = [
+                "success" => false,
+                "message" => "Invalid request body. Expected an array of films.",
+            ];
+    
+            return $this->prepareOkResponse($response, $response_data, HttpCode::STATUS_BAD_REQUEST);
         }
-
-        // Step 2 validate data
-        $html = var_export($film_data, true);
-        //!Validate the request's payload
-        foreach ($film_data as $key => $film) {
-            //? call isValidData($film,$rules);
-            // Step 3 Insert into db
-            $validation_response = $this->isValidData($film, $this->validation_rules);
-            if ($validation_response === true) {
-                $this->films_model->createFilm($film);
+    
+        // Initialize an array to store the response for each film
+        $responseArray = [];
+    
+        foreach ($requestBody as $filmData) {
+            // Check if the film ID is present and valid in each film object
+            if (!isset($filmData['film_id']) || !Input::isInt($filmData['film_id'])) {
+                // Respond with an error message if the film ID is missing or invalid
+                $responseArray[] = [
+                    "success" => false,
+                    "message" => "Invalid or missing film ID provided in the request body.",
+                ];
+                continue;
+            }
+    
+            // Extract the film ID from the film object
+            $film_id = (int) $filmData['film_id'];
+    
+            // Remove the film ID from the film object before updating
+            unset($filmData['film_id']);
+    
+            // Delete the film in the database
+            $updated = $this->films_model->updateFilm($film_id, $filmData);
+    
+            if ($updated) {
+                // Film was successfully updated
+                $responseArray[] = [
+                    "success" => true,
+                    "message" => "Film updated successfully.",
+                ];
             } else {
-                //!Add list of errors
+                // Failed to update the film
+                $responseArray[] = [
+                    "success" => false,
+                    "message" => "Failed to update the film.",
+                ];
             }
         }
-        // Step 4) Prepare response
-        $response_data = array(
-            "code" => HttpCodes::STATUS_CREATED,
-            "message" => "The list of films has been successfully created"
-        );
-        return $this->prepareOkResponse($response, $response_data, HttpCodes::STATUS_CREATED);
+    
+        // Prepare the response for the list of films
+        $responseData = [
+            "code" => HttpCode::STATUS_OK,
+            "message" => "Film(s) updated successfully.",
+            "films" => $responseArray,
+        ];
+    
+        return $this->prepareOkResponse($response, $responseData, HttpCode::STATUS_OK);
     }
 
-    // Deletes a film from the db
-    public function handleDeleteFilm(Request $request, Response $response)
-    {
-        // Step 1) Get the received data from the request body
-        $films = $request->getParsedBody();
-
-
-        // Step 2) Validate the data
-        //!Check-1) if body is empty
-        if (!isset($films)) {
-            throw new HttpBadRequestException(
-                $request,
-                "Could not process the request... The list of films is empty!"
-            );
+    public function handleDeleteFilm(Request $request, Response $response, array $uri_args) {
+        $requestBody = $request->getParsedBody();
+    
+        // Check if the request body is an array
+        if (!is_array($requestBody)) {
+            $response_data = [
+                "success" => false,
+                "message" => "Invalid request body. Expected an array of films.",
+            ];
+    
+            return $this->prepareOkResponse($response, $response_data, HttpCode::STATUS_BAD_REQUEST);
         }
-
-        //!Check-2) Validate the all properties of film
-        //use a function from the BaseController called isValidData          
-        $validation_response = $this->isValidData($films, $this->validation_rules);
-        if ($validation_response === true) {
-            foreach ($films as $film) {
-                $this->films_model->deleteFilm($film);
+    
+        // Initialize an array to store the response for each film
+        $responseArray = [];
+    
+        foreach ($requestBody as $filmData) {
+            // Check if the film ID is present and valid in each film object
+            if (!isset($filmData['film_id']) || !Input::isInt($filmData['film_id'])) {
+                // Respond with an error message if the film ID is missing or invalid
+                $responseArray[] = [
+                    "success" => false,
+                    "message" => "Invalid or missing film ID provided in the request body.",
+                ];
+                continue;
             }
-        } else {
-            //?else keep track of the encountered errors.            
-
+    
+            // Extract the film ID from the film object
+            $film_id = (int) $filmData['film_id'];
+    
+            // Remove the film ID from the film object before deleting
+            unset($filmData['film_id']);
+    
+            // Delete the film in the database
+            $deleted = $this->films_model->deleteFilm($film_id);
+    
+            if ($deleted) {
+                // Film was successfully deleted
+                $responseArray[] = [
+                    "success" => true,
+                    "message" => "Film deleted successfully.",
+                ];
+            } else {
+                // Failed to update the film
+                $responseArray[] = [
+                    "success" => false,
+                    "message" => "Failed to delete the film.",
+                ];
+            }
         }
-
-        // Step 3) Prepare a response
-        $response_data = array(
-            "code" => HttpCode::STATUS_CREATED,
-            "message" => "The list of films has been successfully created"
-        );
-
-        return $this->prepareOkResponse($response, $response_data, HttpCode::STATUS_CREATED);
-        // $response->delete();
+    
+        // Prepare the response for the list of films
+        $responseData = [
+            "code" => HttpCode::STATUS_OK,
+            "message" => "Film(s) deleted successfully.",
+            "films" => $responseArray,
+        ];
+    
+        return $this->prepareOkResponse($response, $responseData, HttpCode::STATUS_OK);
     }
 }

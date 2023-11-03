@@ -20,7 +20,7 @@ class CustomersModel extends BaseModel
         JOIN address ON address.address_id = $this->table_name.address_id
         JOIN city ON city.city_id = address.city_id
         JOIN country ON country.country_id = city.country_id
-        WHERE 1";
+        GROUP BY $this->table_name.customer_id";
         $query_values = [];
         if (isset($filters['first_name'])) {
             $sql .= " AND first_name LIKE CONCAT(:first_name)";

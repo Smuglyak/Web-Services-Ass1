@@ -28,7 +28,7 @@ class ActorsController extends BaseController
 
     // Get the list of actors
     public function handleGetActors(Request $request, Response $response)
-    {      
+    {
         $page = 1; // Default page number if 'page' is not provided
         $page_size = 10; // Default page size if 'page_size' is not provided
 
@@ -53,11 +53,15 @@ class ActorsController extends BaseController
 
         $this->actors_model->setPaginationOptions($page, $page_size);
 
-        // Get the full list of the actors from the DB
-        $actors = $this->actors_model->getAll($filters);
+        $actors = array(
+            "code" => HttpCode::STATUS_OK,
+            "message" => "The list of actors has been acquired",
+            "data" => $this->actors_model->getAll($filters)
+        );     
         //$actors_json = json_encode($actors);
         // $response->getBody()->Write($actors_json);
-        return $this->prepareOkResponse($response, (array)$actors);
+        // return $this->prepareOkResponse($response, (array)$actors);
+        return $this->prepareOkResponse($response, $actors, HttpCode::STATUS_OK);
     }
 
 
@@ -65,19 +69,35 @@ class ActorsController extends BaseController
     {
         $filters = $request->getQueryParams();
         $actor_id = $uri_args['actor_id'];
-        
-        // $actor_info = $this->actors_model->getActorById($actor_id);
-        // get the actor info from the db
-        $actor_film_info = $this->actors_model->getFilmsByActor($actor_id, $filters);
-        
+        //!Check-1) if uri is empty
+        if (empty($actor_id)) {
+            throw new HttpBadRequestException(
+                $request,
+                "Could not process the request... The id is empty!"
+            );
+        }
 
-        return $this->prepareOkResponse($response, (array)$actor_film_info);
+        //!Check-2) if uri is invalid
+        if (Input::isInt(($actor_id))) {
+            // $actor_info = $this->actors_model->getActorById($actor_id);
+            // get the actor info from the db
+            $actor_film_info = $this->actors_model->getFilmsByActor($actor_id, $filters);
+
+
+            return $this->prepareOkResponse($response, (array)$actor_film_info);
+        } else {
+            throw new HttpBadRequestException(
+                $request,
+                "Could not process the request... The id is invalid!"
+            );
+        }
     }
 
-    public function handleCreateActors(Request $request, Response $response){
+    public function handleCreateActors(Request $request, Response $response)
+    {
         // Step 1) Get the received data from the request body
         $actors = $request->getParsedBody();
-        
+
 
         // Step 2) Validate the data
         //!Check-1) if body is empty

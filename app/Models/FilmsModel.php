@@ -79,8 +79,13 @@ class FilmsModel extends BaseModel
         $this->insert($this->table_name, $new_film);
     }
 
-    public function deleteFilm(array $film){
-        $sql = "";
+    public function updateFilm(int $film_id, array $filmData){
         
+    }
+
+    public function deleteFilm(int $film_id){
+        $query_values = [];
+        $sql = "DELETE FROM $this->table_name WHERE film_id=$film_id";
+        return $sql;                       
     }
 }

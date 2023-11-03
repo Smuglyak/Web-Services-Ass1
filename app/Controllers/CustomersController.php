@@ -5,6 +5,7 @@ namespace Vanier\Api\Controllers;
 use Fig\Http\Message\StatusCodeInterface as HttpCode;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Exception\HttpBadRequestException;
 use Vanier\Api\Models\CustomersModel;
 use Vanier\Api\Exceptions\HttpInvalidInputsException;
 use Vanier\Api\Helpers\Input;
@@ -48,9 +49,27 @@ class CustomersController extends BaseController
     {
         $filters = $request->getQueryParams();
         $customer_id = $uri_args['customer_id'];
-        $customer_films = $this->customers_model->getFilmsByCustomer($customer_id, $filters);        
+        //!Check-1) if uri is empty
+        if (empty($customer_id)) {
+            throw new HttpBadRequestException(
+                $request,
+                "Could not process the request... The id is empty!"
+            );
+        }
+
+        //!Check-2) if uri is invalid
+        if (Input::isInt(($customer_id))){
+            $customer_films = $this->customers_model->getFilmsByCustomer($customer_id, $filters);        
         // prepare the http response
         return $this->prepareOkResponse($response, (array)$customer_films);
+        }else{
+            throw new HttpBadRequestException(
+                $request,
+                "Could not process the request... The id is invalid!"
+            );
+        } 
+
+        
     }
 
     // Creates a customer and adds it to the  db

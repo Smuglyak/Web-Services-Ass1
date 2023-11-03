@@ -6,6 +6,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Exception\HttpNotFoundException;
 use Vanier\Api\Controllers\AboutController;
 use Vanier\Api\Controllers\CategoriesController;
+use Vanier\Api\Controllers\DistanceController;
 use Vanier\Api\Controllers\FilmsController;
 use Vanier\Api\Controllers\CustomersController;
 use Vanier\Api\Controllers\ActorsController;
@@ -17,7 +18,7 @@ global $app;
 // The callbacks must be implemented in a controller class.
 // The Vanier\Api must be used as namespace prefix. 
 
-// ROUTE: GET /
+// ROUTE: GET / root
 $app->get('/', [AboutController::class, 'handleAboutApi']);
 
 // ROUTE: GET /films
@@ -29,7 +30,6 @@ $app->get('/hello', function (Request $request, Response $response, $args) {
     $response->getBody()->write("Reporting! Hello there!");
     return $response;
 });
-
 // ROUTE: GET /films/{film_id}
 $app->get('/films/{film_id}', [FilmsController::class, 'handleGetFilmById']);
 
@@ -59,3 +59,12 @@ $app->post('/actors', [ActorsController::class, 'handleCreateActors']);
 
 //ROUTE: GET /categories/{category_id}/films
 $app->get('/categories/{category_id}/films', [CategoriesController::class, 'handleCategoryFilms']);
+
+//ROUTE: DELETE /categories/{category_id}/films
+$app->delete('/films', [FilmsController::class, 'handleDeleteFilm']);
+
+//ROUTE: POST /distance
+$app->post('/distance', [DistanceController::class, 'handleGetDistance']);
+
+
+
